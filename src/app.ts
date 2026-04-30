@@ -1,5 +1,6 @@
 import express from "express";
 import cors from "cors";
+
 import authRoutes from "./routes/auth.routes";
 import userRoutes from "./routes/user.routes";
 import projectRoutes from "./routes/project.routes";
@@ -11,7 +12,13 @@ import emailRoutes from "./routes/email.routes";
 
 const app = express();
 
-app.use(cors());
+app.use(
+  cors({
+    origin: "*",
+    credentials: true,
+  })
+);
+
 app.use(express.json({ limit: "2mb" }));
 
 app.get("/", (_req, res) => {
@@ -29,11 +36,20 @@ app.use("/api/reports", reportRoutes);
 app.use("/api/ai", aiRoutes);
 app.use("/api/email", emailRoutes);
 
-
-app.use((err: any, _req: any, res: any, _next: any) => {
-  console.error(err);
-  res.status(500).json({ message: "Something went wrong" });
+app.use((_req, res) => {
+  res.status(404).json({
+    message: "Route not found",
+  });
 });
 
+app.use((err: any, _req: any, res: any, _next: any) => {
+  if (process.env.NODE_ENV !== "production") {
+    console.error(err);
+  }
+
+  res.status(err?.statusCode || 500).json({
+    message: err?.message || "Something went wrong",
+  });
+});
 
 export default app;

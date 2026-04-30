@@ -2,13 +2,13 @@ import bcrypt from "bcryptjs";
 import { connectDB } from "./config/db";
 import User from "./models/User";
 
-async function resetAdmin() {
+async function resetDemoUsers() {
   try {
     await connectDB();
 
     const hashedPassword = await bcrypt.hash("password123", 10);
 
-    await User.findOneAndUpdate(
+    const admin = await User.findOneAndUpdate(
       { email: "admin@example.com" },
       {
         name: "Admin",
@@ -18,21 +18,45 @@ async function resetAdmin() {
         isActive: true,
         leader: null,
       },
-      {
-        upsert: true,
-        new: true,
-      }
+      { upsert: true, new: true }
     );
 
-    console.log("Admin reset successfully");
-    console.log("Email: admin@example.com");
-    console.log("Password: password123");
+    const leader = await User.findOneAndUpdate(
+      { email: "leader12@example.com" },
+      {
+        name: "Leader Two",
+        email: "leader12@example.com",
+        password: hashedPassword,
+        role: "LEADER",
+        isActive: true,
+        leader: null,
+      },
+      { upsert: true, new: true }
+    );
+
+    const member = await User.findOneAndUpdate(
+      { email: "member12@example.com" },
+      {
+        name: "Member One",
+        email: "member12@example.com",
+        password: hashedPassword,
+        role: "MEMBER",
+        isActive: true,
+        leader: leader._id,
+      },
+      { upsert: true, new: true }
+    );
+
+    console.log("Demo users reset successfully");
+    console.log("Admin:", admin.email, "/ password123");
+    console.log("Leader:", leader.email, "/ password123");
+    console.log("Member:", member.email, "/ password123");
 
     process.exit(0);
   } catch (error) {
-    console.error("Admin reset failed:", error);
+    console.error("Demo users reset failed:", error);
     process.exit(1);
   }
 }
 
-resetAdmin();
+resetDemoUsers();
