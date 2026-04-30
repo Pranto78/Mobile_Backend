@@ -350,6 +350,87 @@ export async function updateTaskStatus(req: Request, res: Response) {
   }
 }
 
+export async function carryOverTask(req: Request, res: Response) {
+  try {
+    const authUser = getAuthUser(req);
+    const { id } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id as string)) {
+      return res.status(400).json({
+        message: "Invalid task ID.",
+      });
+    }
+
+    const task = await Task.findById(id);
+
+    if (!task) {
+      return res.status(404).json({
+        message: "Task not found.",
+      });
+    }
+
+    if (task.isLocked) {
+      return res.status(400).json({
+        message: "This task is already locked.",
+      });
+    }
+
+    if (task.status === "DONE") {
+      return res.status(400).json({
+        message: "Completed tasks cannot be carried over.",
+      });
+    }
+
+    const hasAccess = await canAccessTask(authUser, task);
+
+    if (!hasAccess) {
+      return res.status(403).json({
+        message: "You do not have permission to carry over this task.",
+      });
+    }
+
+    if (task.status === "IN_PROGRESS") {
+      const elapsed = calculateElapsedSeconds(task.currentStartedAt);
+      task.timeSpentSeconds += elapsed;
+      task.currentStartedAt = null;
+    }
+
+    task.isLocked = true;
+    await task.save();
+
+    const newTask = await Task.create({
+      title: task.title,
+      description: task.description || "",
+      project: task.project,
+      assignedTo: task.assignedTo,
+      createdBy: authUser.id,
+      status: "TODO",
+      timeSpentSeconds: 0,
+      currentStartedAt: null,
+      isLocked: false,
+      carryOverFrom: task._id,
+      taskDate: new Date(),
+    });
+
+    const populatedTask = await Task.findById(newTask._id)
+      .populate("project", "name description")
+      .populate("assignedTo", "name email role")
+      .populate("createdBy", "name email role");
+
+    return res.status(201).json({
+      message: "Task carried over successfully.",
+      originalTaskId: task._id,
+      task: populatedTask,
+    });
+  } catch (error) {
+    console.error(error);
+
+    return res.status(500).json({
+      message: "Failed to carry over task.",
+    });
+  }
+}
+
 export async function deleteTask(req: Request, res: Response) {
   try {
     const authUser = getAuthUser(req);
