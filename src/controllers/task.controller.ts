@@ -182,7 +182,7 @@ export async function updateTask(req: Request, res: Response) {
     const { id } = req.params;
     const { title, description, projectId, assignedToId } = req.body;
 
-    if (!mongoose.Types.ObjectId.isValid(id)) {
+    if (typeof id !== "string" || !mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({
         message: "Invalid task ID.",
       });
@@ -263,10 +263,10 @@ export async function updateTask(req: Request, res: Response) {
 export async function updateTaskStatus(req: Request, res: Response) {
   try {
     const authUser = getAuthUser(req);
-    const { id } = req.params;
+    const { id } = req.params as { id: string };
     const { status } = req.body as { status: Status };
 
-    if (!mongoose.Types.ObjectId.isValid(id)) {
+    if (typeof id !== 'string' || !mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({
         message: "Invalid task ID.",
       });
@@ -353,7 +353,7 @@ export async function updateTaskStatus(req: Request, res: Response) {
 export async function deleteTask(req: Request, res: Response) {
   try {
     const authUser = getAuthUser(req);
-    const { id } = req.params;
+    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({
