@@ -4,37 +4,50 @@ import User from "./models/User";
 import { connectDB } from "./config/db";
 
 async function seed() {
-  await connectDB();
+  try {
+    await connectDB();
 
-  await User.deleteMany({});
+    await User.deleteMany({});
 
-  const passwordHash = await bcrypt.hash("password123", 10);
+    const hashedPassword = await bcrypt.hash("password123", 10);
 
-  const admin = await User.create({
-    name: "Admin",
-    email: "admin@example.com",
-    passwordHash,
-    role: "ADMIN",
-  });
+    const admin = await User.create({
+      name: "Admin",
+      email: "admin@example.com",
+      password: hashedPassword,
+      role: "ADMIN",
+    });
 
-  const leader = await User.create({
-    name: "Leader",
-    email: "leader@example.com",
-    passwordHash,
-    role: "LEADER",
-  });
+    const leader = await User.create({
+      name: "Leader",
+      email: "leader@example.com",
+      password: hashedPassword,
+      role: "LEADER",
+    });
 
-  const member = await User.create({
-    name: "Member",
-    email: "member@example.com",
-    passwordHash,
-    role: "MEMBER",
-    leaderId: leader._id,
-  });
+    const member = await User.create({
+      name: "Member",
+      email: "member@example.com",
+      password: hashedPassword,
+      role: "MEMBER",
+      leaderId: leader._id,
+    });
 
-  console.log({ admin, leader, member });
+    console.log("Seed completed successfully");
+    console.log({
+      admin: admin.email,
+      leader: leader.email,
+      member: member.email,
+      password: "password123",
+    });
 
-  process.exit();
+    await mongoose.disconnect();
+    process.exit(0);
+  } catch (error) {
+    console.error("Seed failed:", error);
+    await mongoose.disconnect();
+    process.exit(1);
+  }
 }
 
 seed();
